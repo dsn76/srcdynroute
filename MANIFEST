@@ -1,0 +1,48 @@
+# srcdynroute manifest
+# Generated: 2026-10-12
+# sha256 of sources, patches, tests, article and README,
+# paths relative to this file. sha256sum -c checks the hash lines
+# and skips these comments. A zero exit means every hash matched.
+#
+# md5 of the patches, for a cross-check against copies applied
+# to a kernel or nftables tree:
+# 6ce6cdeae7fda348ca7718b1cc145308  patches/kernel/0001-dynrt-abi-header.patch
+# b138beda7edf8cb5ff4b206d2609540b  patches/kernel/0002-ct-ext-src-dyn-rt.patch
+# fff96fb1c27150f31739cdf3cb976310  patches/kernel/0003-nf-dynrt-helper.patch
+# 7fb1539ea617754ae878dee603a90b8e  patches/kernel/0004-fib-oif-forcing.patch
+# 383601dd5f38ae973fe307c9671cb98f  patches/kernel/0005-neighbour-l2-override.patch
+# a9079c2abfe039de2e13bff9c8fd8b97  patches/kernel/0006-fib-blackhole-beats-forced-oif.patch
+# c434b307179738e04cb21b42d6c9de24  patches/userspace/1001_nft-dynrt.patch
+# 79a09e3ef198c00ed22de75ca6dc5c9d  patches/userspace/1002_libnftnl-dynrt.patch
+
+89a6e40a58eafe6b1934c8bb80c56eac7c2a9909787af7dc24e0506041c03155  Makefile
+ebdf2270fae2807429298d92dff3706981c276dc0956efa30af4fe2cbd207a3f  README.md
+
+ee93686d5bb6ef13f6e6fd896708c7d88db091b7bc25503f658731fc576161a1  include/dynrt.h
+cb351c04706fda22b01632556f945206a575e660af8dbc6b498f6f7cf7780b2e  patches/kernel/0001-dynrt-abi-header.patch
+ddfa2e79c9e3a89b9e31ae29da8523b1d497ec36ceae12ddb708ae8c86a26a5c  patches/kernel/0002-ct-ext-src-dyn-rt.patch
+bdf74b3f23dc3acf3976cb88611cfb86ad7a89148fbda981936e5a26e3c5508b  patches/kernel/0003-nf-dynrt-helper.patch
+0aa75e1b0ff39392f8c227d11db2adad2d98dfe1b2deffeb8e37ea7e15a1ea72  patches/kernel/0004-fib-oif-forcing.patch
+7fbb810a709996c4a61e5f41014622caa1d92425d4197526e13c2d42bac4a6d0  patches/kernel/0005-neighbour-l2-override.patch
+cb7ea60b57cdd8aec7c167f715509b1a7b3821e0b00d03cb7db4933b23dfcbf9  patches/kernel/0006-fib-blackhole-beats-forced-oif.patch
+a286a59ef4181ac914000527b522720fa0649d3fb9c0408e7062f3ddd2a9938a  patches/userspace/1001_nft-dynrt.patch
+d2fdf4c4088c9142e4f472bfabaf1a12f3a4721829c1480dec0beeed233a9ce8  patches/userspace/1002_libnftnl-dynrt.patch
+eaa20bf62eb37c881e1ae4908cae306af8db4d5a016b877cc07647c248237723  srcdynroute.c
+2ebae5c496dd7e0d3d3c719eaf5255f00ff1ee3cb32a7a4089498aa4d63465ad  tests/README.md
+4283928d1d296a91ac950bfcd656c2d07f241bd6bebffae8691cf527c6f7336b  tests/S1_v4_inout.sh
+e3c2eaf1b7db5212f2383e3b1ad39f8164e31e4fd99ec9c82c6235b853672c8b  tests/S2_v6_inout.sh
+033d4aa77f83655eabbe9d64d0e66f5a7b031c64ca81fd88d4cf9b1850977e91  tests/S3_forward.sh
+ae44946598744abc7cc6660ab7b040b161d631cc65b1c2a54df96a0b8a33c9d2  tests/S4_masq.sh
+57387a2fa08f58bfbde7d827c838808b97184673763cc91264be95d2599305a2  tests/S5_blackhole.sh
+9c91c0400100a0d76958d989d635989c7daf98903b75961e12092d0ecb15cd61  tests/S6_ifacct_types.sh
+163798e35b9b188ff76de2d842c9395d69bd25c4caf20da7ab5c408cbb37a81c  tests/S6b_anchor_discrim.sh
+67a4ad23f33c3279ed35b4ad4e30a36b9ede61834e6531edc0b380c7445692e7  tests/S6b_neg_prime_matrix.sh
+7faf9c509fe1245d68b540217cb633d9af0742412ff583cdae98c240d1e06c3f  tests/S6b_neg_residual_check.sh
+2b1adff879546182794f543ede033c45f5d509471da1ee31c5d5529186f5b591  tests/S6b_neg_ttl_discrim.sh
+d30eeb120feedafe2958b211df319c6830f2a7c9430a6e3528ef1c99bd23b0c2  tests/S7_concurrency.sh
+56535b8efa1071b88ee55de8c076bd416e83f78af6702a45383003c0d4262b64  tests/S8_rule_update.sh
+942345e58a2458aad04f57bb760e1056bc1a14a0efffacdbf44b5a30f19b1e79  tests/kp_evid.sh
+117a09d2364cd878c3780f1825e38f99aad6b567a7701cab45ea5d2f7fdf3205  tests/lib.sh
+fb9bb0e35c0c14f4fca699b7c9f9c545c8fc5864b805b124cb1c615792d29be6  tests/m6.py
+ab39202af1ffc7ccd8826e67160680cac30732d9d473ea763b3516015049fba5  tests/m6_matrix.sh
+d397cc654b4bc5d61edd7341bb02eadf1273cc90c924dcb15b736507e42f5598  tests/run_all.sh

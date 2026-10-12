@@ -1,0 +1,275 @@
+From: srcdynroute project <srcdynroute@local>
+Subject: [PATCH 1001] nftables: add DYNSRCROUTE/DYNRT statement support
+
+Adds bare-keyword statements DYNSRCROUTE (target) and DYNRT (match)
+for the out-of-tree srcdynroute kernel module (kernels >= 6.12.111
+with patches 0001-0005, module srcdynroute.ko loaded). Generated
+against nftables 1.1.3 (pristine tarball). Apply with 'patch -p1 -d
+<nftables-root>' or 'git apply' then ./configure && make.
+
+diff -ruN a/Makefile.am b/Makefile.am
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -202,6 +202,7 @@
+ 	src/cache.c \
+ 	src/cmd.c \
+ 	src/ct.c \
++	src/dynrt.c \
+ 	src/datatype.c \
+ 	src/dccpopt.c \
+ 	src/erec.c \
+diff -ruN a/include/statement.h b/include/statement.h
+--- a/include/statement.h
++++ b/include/statement.h
+@@ -305,6 +305,8 @@
+  * @STMT_OBJREF:	stateful object reference statement
+  * @STMT_EXTHDR:	extension header statement
+  * @STMT_FLOW_OFFLOAD:	flow offload statement
++ * @STMT_DYNRT_SRCROUTE:	DYNSRCROUTE target statement (srcdynroute)
++ * @STMT_DYNRT:		DYNRT match statement (srcdynroute)
+  * @STMT_CONNLIMIT:	connection limit statement
+  * @STMT_MAP:		map statement
+  * @STMT_SYNPROXY:	synproxy statement
+@@ -336,6 +338,8 @@
+ 	STMT_OBJREF,
+ 	STMT_EXTHDR,
+ 	STMT_FLOW_OFFLOAD,
++	STMT_DYNRT_SRCROUTE,
++	STMT_DYNRT,
+ 	STMT_CONNLIMIT,
+ 	STMT_MAP,
+ 	STMT_SYNPROXY,
+@@ -426,4 +430,9 @@
+ const char *get_rate(uint64_t byte_rate, uint64_t *rate);
+ const char *get_unit(uint64_t u);
+ 
++extern const struct stmt_ops dynrt_srcroute_stmt_ops;
++extern struct stmt *dynrt_srcroute_stmt_alloc(const struct location *loc);
++extern const struct stmt_ops dynrt_stmt_ops;
++extern struct stmt *dynrt_stmt_alloc(const struct location *loc);
++
+ #endif /* NFTABLES_STATEMENT_H */
+diff -ruN /dev/null src/dynrt.c b/src/dynrt.c
+--- /dev/null
++++ b/src/dynrt.c
+@@ -0,0 +1,52 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * dynrt.c -- statements for the srcdynroute kernel extension (nft CLI).
++ *
++ * DYNSRCROUTE (target) and DYNRT (match) are bare keyword statements that
++ * map 1:1 to the kernel expressions of the srcdynroute module.  The kernel
++ * expression names are matched case-sensitively, so keep them byte-for-byte
++ * identical to:
++ *   - the MODULE expression names in the module (nft_expr_type.name),
++ *   - the MODULE_ALIAS_NFT_EXPR() autoload aliases,
++ *   - these alloc_nft_expr()/netlink_parse table entries below.
++ */
++#include <nft.h>
++
++#include <stddef.h>
++#include <stdio.h>
++
++#include <statement.h>
++
++static void dynrt_srcroute_stmt_print(const struct stmt *stmt,
++				      struct output_ctx *octx)
++{
++	nft_print(octx, "DYNSRCROUTE");
++}
++
++const struct stmt_ops dynrt_srcroute_stmt_ops = {
++	.type		= STMT_DYNRT_SRCROUTE,
++	.name		= "dynsrcroute",
++	.print		= dynrt_srcroute_stmt_print,
++};
++
++struct stmt *dynrt_srcroute_stmt_alloc(const struct location *loc)
++{
++	return stmt_alloc(loc, &dynrt_srcroute_stmt_ops);
++}
++
++static void dynrt_stmt_print(const struct stmt *stmt,
++			     struct output_ctx *octx)
++{
++	nft_print(octx, "DYNRT");
++}
++
++const struct stmt_ops dynrt_stmt_ops = {
++	.type		= STMT_DYNRT,
++	.name		= "dynrt",
++	.print		= dynrt_stmt_print,
++};
++
++struct stmt *dynrt_stmt_alloc(const struct location *loc)
++{
++	return stmt_alloc(loc, &dynrt_stmt_ops);
++}
+diff -ruN a/src/statement.c b/src/statement.c
+--- a/src/statement.c
++++ b/src/statement.c
+@@ -1117,6 +1117,8 @@
+ 	case STMT_OBJREF: return &objref_stmt_ops;
+ 	case STMT_EXTHDR: return &exthdr_stmt_ops;
+ 	case STMT_FLOW_OFFLOAD: return &flow_offload_stmt_ops;
++	case STMT_DYNRT_SRCROUTE: return &dynrt_srcroute_stmt_ops;
++	case STMT_DYNRT: return &dynrt_stmt_ops;
+ 	case STMT_CONNLIMIT: return &connlimit_stmt_ops;
+ 	case STMT_MAP: return &map_stmt_ops;
+ 	case STMT_SYNPROXY: return &synproxy_stmt_ops;
+diff -ruN a/src/scanner.l b/src/scanner.l
+--- a/src/scanner.l
++++ b/src/scanner.l
+@@ -808,6 +808,8 @@
+ }
+ 
+ "notrack"		{ return NOTRACK; }
++"DYNSRCROUTE"	{ return DYNSRCROUTE; }
++"DYNRT"		{ return DYNRT; }
+ 
+ "all"			{ return ALL; }
+ 
+diff -ruN a/src/netlink_linearize.c b/src/netlink_linearize.c
+--- a/src/netlink_linearize.c
++++ b/src/netlink_linearize.c
+@@ -1563,6 +1563,26 @@
+ 	nft_rule_add_expr(ctx, nle, &stmt->location);
+ }
+ 
++static void netlink_gen_dynrt_srcroute_stmt(struct netlink_linearize_ctx *ctx,
++					    const struct stmt *stmt)
++{
++	struct nftnl_expr *nle;
++
++	/* name must be byte-identical to the kernel expr name (case-sensitive) */
++	nle = alloc_nft_expr("DYNSRCROUTE");
++	nft_rule_add_expr(ctx, nle, &stmt->location);
++}
++
++static void netlink_gen_dynrt_stmt(struct netlink_linearize_ctx *ctx,
++				   const struct stmt *stmt)
++{
++	struct nftnl_expr *nle;
++
++	/* name must be byte-identical to the kernel expr name (case-sensitive) */
++	nle = alloc_nft_expr("DYNRT");
++	nft_rule_add_expr(ctx, nle, &stmt->location);
++}
++
+ static void netlink_gen_set_stmt(struct netlink_linearize_ctx *ctx,
+ 				 const struct stmt *stmt)
+ {
+@@ -1739,6 +1759,10 @@
+ 		return netlink_gen_notrack_stmt(ctx, stmt);
+ 	case STMT_FLOW_OFFLOAD:
+ 		return netlink_gen_flow_offload_stmt(ctx, stmt);
++	case STMT_DYNRT_SRCROUTE:
++		return netlink_gen_dynrt_srcroute_stmt(ctx, stmt);
++	case STMT_DYNRT:
++		return netlink_gen_dynrt_stmt(ctx, stmt);
+ 	case STMT_OBJREF:
+ 		return netlink_gen_objref_stmt(ctx, stmt);
+ 	case STMT_MAP:
+diff -ruN a/src/netlink_delinearize.c b/src/netlink_delinearize.c
+--- a/src/netlink_delinearize.c
++++ b/src/netlink_delinearize.c
+@@ -1008,6 +1008,20 @@
+ 	ctx->stmt = notrack_stmt_alloc(loc);
+ }
+ 
++static void netlink_parse_dynrt_srcroute(struct netlink_parse_ctx *ctx,
++					 const struct location *loc,
++					 const struct nftnl_expr *nle)
++{
++	ctx->stmt = dynrt_srcroute_stmt_alloc(loc);
++}
++
++static void netlink_parse_dynrt(struct netlink_parse_ctx *ctx,
++				const struct location *loc,
++				const struct nftnl_expr *nle)
++{
++	ctx->stmt = dynrt_stmt_alloc(loc);
++}
++
+ static void netlink_parse_flow_offload(struct netlink_parse_ctx *ctx,
+ 				       const struct location *loc,
+ 				       const struct nftnl_expr *nle)
+@@ -1930,6 +1944,8 @@
+ 	{ .name = "nat",	.parse = netlink_parse_nat },
+ 	{ .name = "tproxy",	.parse = netlink_parse_tproxy },
+ 	{ .name = "notrack",	.parse = netlink_parse_notrack },
++	{ .name = "DYNSRCROUTE",	.parse = netlink_parse_dynrt_srcroute },
++	{ .name = "DYNRT",	.parse = netlink_parse_dynrt },
+ 	{ .name = "masq",	.parse = netlink_parse_masq },
+ 	{ .name = "redir",	.parse = netlink_parse_redir },
+ 	{ .name = "dup",	.parse = netlink_parse_dup },
+diff -ruN a/src/parser_bison.y b/src/parser_bison.y
+--- a/src/parser_bison.y
++++ b/src/parser_bison.y
+@@ -674,6 +674,9 @@
+ 
+ %token NOTRACK			"notrack"
+ 
++%token DYNSRCROUTE		"DYNSRCROUTE"
++%token DYNRT			"DYNRT"
++
+ %token EXISTS			"exists"
+ %token MISSING			"missing"
+ 
+@@ -5316,6 +5319,14 @@
+ 			{
+ 				$$ = notrack_stmt_alloc(&@$);
+ 			}
++			|	DYNSRCROUTE
++			{
++				$$ = dynrt_srcroute_stmt_alloc(&@$);
++			}
++			|	DYNRT
++			{
++				$$ = dynrt_stmt_alloc(&@$);
++			}
+ 			|	FLOW	OFFLOAD	AT string	close_scope_at
+ 			{
+ 				$$ = flow_offload_stmt_alloc(&@$, $4);
+diff -ruN a/src/optimize.c b/src/optimize.c
+--- a/src/optimize.c
++++ b/src/optimize.c
+@@ -225,6 +225,8 @@
+ 		return __expr_cmp(expr_a->left, expr_b->left);
+ 	case STMT_COUNTER:
+ 	case STMT_NOTRACK:
++	case STMT_DYNRT_SRCROUTE:
++	case STMT_DYNRT:
+ 		break;
+ 	case STMT_VERDICT:
+ 		if (!fully_compare)
+@@ -392,6 +394,8 @@
+ 	case STMT_VERDICT:
+ 	case STMT_COUNTER:
+ 	case STMT_NOTRACK:
++	case STMT_DYNRT_SRCROUTE:
++	case STMT_DYNRT:
+ 	case STMT_LOG:
+ 	case STMT_NAT:
+ 	case STMT_REJECT:
+@@ -437,6 +441,8 @@
+ 			break;
+ 		case STMT_COUNTER:
+ 		case STMT_NOTRACK:
++		case STMT_DYNRT_SRCROUTE:
++		case STMT_DYNRT:
+ 			break;
+ 		case STMT_LOG:
+ 			memcpy(&clone->log, &stmt->log, sizeof(clone->log));
+diff -ruN a/src/evaluate.c b/src/evaluate.c
+--- a/src/evaluate.c
++++ b/src/evaluate.c
+@@ -4900,6 +4900,8 @@
+ 	case STMT_QUOTA:
+ 	case STMT_NOTRACK:
+ 	case STMT_FLOW_OFFLOAD:
++	case STMT_DYNRT_SRCROUTE:
++	case STMT_DYNRT:
+ 		return 0;
+ 	case STMT_EXPRESSION:
+ 		return stmt_evaluate_expr(ctx, stmt);

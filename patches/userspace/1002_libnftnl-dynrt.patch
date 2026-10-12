@@ -1,0 +1,34 @@
+--- a/src/expr_ops.c
++++ b/src/expr_ops.c
+@@ -48,6 +48,22 @@
+ 	.name	= "notrack",
+ };
+ 
++/*
++ * srcdynroute — out-of-tree zero-attribute nft expression modules
++ * (kernel patches 0001..0005 + srcdynroute.ko). Both TARGET and MATCH
++ * carry no netlink data attributes, exactly like "notrack": register
++ * their names here so libnftnl can allocate, serialize and parse rules
++ * that embed them (required for nft linearize/delinearize, e.g.
++ * `nft -c -f` and `nft list ruleset`).
++ */
++static struct expr_ops expr_ops_dynsrcroute = {
++	.name	= "DYNSRCROUTE",
++};
++
++static struct expr_ops expr_ops_dynrt = {
++	.name	= "DYNRT",
++};
++
+ static struct expr_ops *expr_ops[] = {
+ 	&expr_ops_bitwise,
+ 	&expr_ops_byteorder,
+@@ -71,6 +87,8 @@
+ 	&expr_ops_nat,
+ 	&expr_ops_tproxy,
+ 	&expr_ops_notrack,
++	&expr_ops_dynsrcroute,
++	&expr_ops_dynrt,
+ 	&expr_ops_payload,
+ 	&expr_ops_range,
+ 	&expr_ops_redir,
